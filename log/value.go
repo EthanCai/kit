@@ -39,6 +39,36 @@ func Timestamp(t func() time.Time) Valuer {
 	return func() interface{} { return t() }
 }
 
+// TimestampFormat returns a Valuer that produces a TimeFormat value from
+// layout and the time returned by t. Users will probably want to use
+// DefaultTimestamp or DefaultTimestampUTC.
+func TimestampFormat(t func() time.Time, layout string) Valuer {
+	return func() interface{} {
+		return TimeFormat{
+			Time:   t(),
+			Layout: layout,
+		}
+	}
+}
+
+// A TimeFormat represents an instant in time and a layout used when
+// marshaling to a text format.
+type TimeFormat struct {
+	Time   time.Time
+	Layout string
+}
+
+func (tf TimeFormat) String() string {
+	return tf.Time.Format(tf.Layout)
+}
+
+// MarshalText implements encoding.TextMarshaller.
+func (tf TimeFormat) MarshalText() (text []byte, err error) {
+	b := make([]byte, 0, len(tf.Layout)+10)
+	b = tf.Time.AppendFormat(b, tf.Layout)
+	return b, nil
+}
+
 // Caller returns a Valuer that returns a file and line from a specified depth
 // in the callstack. Users will probably want to use DefaultCaller.
 func Caller(depth int) Valuer {
@@ -48,15 +78,14 @@ func Caller(depth int) Valuer {
 var (
 	// DefaultTimestamp is a Valuer that returns the current wallclock time,
 	// respecting time zones, when bound.
-	DefaultTimestamp = Valuer(func() interface{} {
-		return time.Now().Format(time.RFC3339Nano)
-	})
+	DefaultTimestamp = TimestampFormat(time.Now, time.RFC3339Nano)
 
 	// DefaultTimestampUTC is a Valuer that returns the current time in UTC
 	// when bound.
-	DefaultTimestampUTC = Valuer(func() interface{} {
-		return time.Now().UTC().Format(time.RFC3339Nano)
-	})
+	DefaultTimestampUTC = TimestampFormat(
+		func() time.Time { return time.Now().UTC() },
+		time.RFC3339Nano,
+	)
 
 	// DefaultCaller is a Valuer that returns the file and line where the Log
 	// method was invoked. It can only be used with log.With.
