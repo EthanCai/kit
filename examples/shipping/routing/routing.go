@@ -4,7 +4,7 @@
 package routing
 
 import (
-	"github.com/go-kit/kit/examples/shipping/cargo"
+	"github.com/go-kit/kit/examples/shipping/model/cargo"
 )
 
 // Service provides access to an external routing service.
